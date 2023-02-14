@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Git Teste</string>
+    <string name="strButton">Lista de Apps</string>
+    <string name="txtView">Para ver a lista de aplicativos clique no botão:</string>
+    <string name="txtTituloUm">NÃO SE VÁ:</string>
+    <string name="txtTituloDois">prevendo o abandono de usuários de serviços móveis</string>
+</resources>

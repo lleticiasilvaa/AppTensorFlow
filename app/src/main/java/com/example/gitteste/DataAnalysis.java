@@ -1,11 +1,12 @@
 package com.example.gitteste;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.os.Bundle;
+import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.ArrayAdapter;
+
+import androidx.appcompat.app.AppCompatActivity;
+
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -47,7 +48,7 @@ public class DataAnalysis extends AppCompatActivity {
         FileInputStream fis = null;
         ArrayList<String> dados = new ArrayList<>();
         try {
-            fis = openFileInput(data+".cvs");
+            fis = openFileInput(data+".csv");
             InputStreamReader isr = new InputStreamReader(fis);
             BufferedReader br = new BufferedReader(isr);
             StringBuilder sb = new StringBuilder();

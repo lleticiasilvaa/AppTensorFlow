@@ -9,7 +9,7 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import org.tensorflow.lite.Interpreter;
+import org.tensorflow.lite.*;
 
 import java.io.FileInputStream;
 import java.io.IOException;

@@ -25,6 +25,12 @@ public class Previsao extends AppCompatActivity {
     String entrada;
     int i = 0;
 
+    private int nUsers = 1;
+    private int nTimesStamps = 1000;
+    private int nDim = 200;
+    private float inputTensor[][] = new float[nTimesStamps][nDim];
+    private int TimeStamp = 0; //ir incrementando a medida que novos eventos forem marcados
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

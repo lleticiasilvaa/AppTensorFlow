@@ -3,6 +3,7 @@ package com.example.gitteste;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
 import android.os.Bundle;
 import android.view.View;
 
@@ -13,23 +14,18 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
-    
+
     private String dataAtual;
     private String dataColetaAnterior;
-    private int nUsers = 1;
-    private int nTimesStamps = 1000;
-    private int nDim = 200;
-    private float inputTensor[][] = new float[nTimesStamps][nDim];
-    private int TimeStamp = 0; //ir incrementando a medida que novos eventos forem marcados
 
     //metodo acionado assim que atividade é criada
     @Override
@@ -68,15 +64,21 @@ public class MainActivity extends AppCompatActivity {
                 //ler data da ultima coleta
                 lerDataUltimaColeta();
                 System.out.print("\nUltima coleta = "+ dataColetaAnterior);
+
                 // comparar com a última
-                //compararListas(dataAtual, dataColetaAnterior);
+                System.out.print("\nComparando lista "+dataAtual+" com "+dataColetaAnterior);
+                instalações(dataAtual, dataColetaAnterior);
+                desinstalações(dataAtual, dataColetaAnterior);
+                //para cada evento salvar: data, nome aplicativo, tipo em arquivo .csv
+                //quando for prever: ler esse arquivo para criar tensor
+
                 //atualizar data coleta
                 salvarDataColeta();
                 System.out.print("\nColeta de hoje CHECK! Ultima coleta ("+ dataColetaAnterior +") == Data Hoje ("+dataAtual+")");
-                salvarDatasColetas ();
 
                 //comparar com todas as últimas se pedir para prever
                 //=> salvar todas as datas de coletas
+                //salvarDatasColetas ();
                 //=> comparar primeira com segunda até penultima com útima
                 //=> criar eventos para instalações e desistalações de apps (apenas dos usados no treinamento)
             }
@@ -86,11 +88,15 @@ public class MainActivity extends AppCompatActivity {
             lerDataUltimaColeta();
             System.out.print("\nJá coletou HOJE! Ultima coleta ("+ dataColetaAnterior +") == Data Hoje ("+dataAtual+")");
         }
+        /*
 
         ArrayList<String> datasColetas = lerDatasColetas();
         System.out.print("\nDatas de Coletas: \n"+datasColetas);
+        */
 
-        compararListas("24-02-2023", "23-02-2023");
+        System.out.print("\nComparando lista 24-02 com lista 28-02:");
+        instalações("28-02-2023","24-02-2023");
+        desinstalações("28-02-2023","24-02-2023");
 
         System.out.print("\n");
     }
@@ -116,9 +122,6 @@ public class MainActivity extends AppCompatActivity {
         //salvar lista no armazenamento interno:
         String FILE_NAME = (dataAtual+".csv");
         FileOutputStream fos = null;
-        //checar se já existe arquivo com data do dia:
-        //boolean exists = (new File(getFilesDir() + "/" + FILE_NAME)).exists();
-        //if(!exists){//se ainda não existir, ou seja, se existis = False então é a primeira coleta do dia,
         try {
             fos = openFileOutput(FILE_NAME, MODE_APPEND);
             for (i = 0; i < applicationInfoList.size(); i++) {
@@ -231,22 +234,112 @@ public class MainActivity extends AppCompatActivity {
         return dados;
     }
 
-    private void compararListas (String atual, String anterior){
-        HashSet<String> listaAtual = lerListaApps(atual);
-        HashSet<String> listaAnterior = lerListaApps(anterior);
+    private void instalações(String atual, String anterior){
 
-        System.out.print("\nLista Atual: \n"+ listaAtual);
-        System.out.print("\nLista Anterior: \n"+ listaAnterior);
+        ArrayList<String> listaAtual = lerListaApps(atual);
+        ArrayList<String> listaAnterior = lerListaApps(anterior);
 
-        //comparar
-        //para cada evento salvar: data, nome aplicativo, tipo em arquivo .csv
-        //quando for prever: ler esse arquivo para criar tensor
+        listaAtual.removeAll(listaAnterior); //remove da atual, se houver, todos os objetos que coincidirem com anterior;
+        //sobra na atual apenas os apps que estão na atual mas não na anterior = apps instalados
+
+        boolean listaVazia = listaAtual.isEmpty();
+        if(listaVazia){ //se a lista estiver vazia => não houve instalações
+            System.out.print("\nNão Houve Instalações!!!");
+        }
+        else{
+            System.out.print("\nHouve Instalações!!!\n="+listaAtual);
+            conferirApps(1,listaAnterior);
+        }
     }
 
-    public HashSet<String> lerListaApps(String data) {
+    private void desinstalações(String atual, String anterior){
+
+        ArrayList<String> listaAtual = lerListaApps(atual);
+        ArrayList<String> listaAnterior = lerListaApps(anterior);
+
+        listaAnterior.removeAll(listaAtual); //remove da anteriro, se houver, todos os objetos que coincidirem com atual;
+        //sobra na anterior apenas os apps que estão na anterior mas não na atual = apps desinstalados
+
+        boolean listaVazia = listaAnterior.isEmpty();
+        if(listaVazia){ //se a lista estiver vazia => não houve desisntalações
+            System.out.print("\nNão Houve Desinstalações!!!");
+        }
+        else{
+            System.out.print("\nHouve Desinstalações!!!\n="+listaAnterior);
+            conferirApps(0,listaAnterior);
+            //para cada aplicativo que sobrou na lista anterior, ou seja, para cada aplicativo desinstalado
+            //conferir se está na lista de aps usados no treino
+            //se estiver: marcar evento de desinstalação
+        }
+    }
+
+    public ArrayList<String> lerAppsAssets() {
+
+        InputStream is = null;
+        ArrayList<String> appsTreino = new ArrayList<>();
+
+        try {
+            AssetManager manager = this.getAssets();
+            is = manager.open("listaApps.csv");
+            BufferedReader br = new BufferedReader(new InputStreamReader(is));
+            String lido;
+
+            while ((lido = br.readLine()) != null) {
+                appsTreino.add(lido);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        System.out.print("\nLeu dos assets:\n"+appsTreino);
+
+        return appsTreino;
+    }
+
+    public void conferirApps(int tipo, ArrayList<String> appsConferir) {
+        ArrayList<String> appsTreino = lerAppsAssets();
+        for (int x = 0; x < appsConferir.size(); x++) {
+            String app = appsConferir.get(x);
+            if (appsTreino.contains(app)) {
+                marcarEvento(tipo, app);
+            }
+        }
+    }
+
+    public void marcarEvento(int tipo, String app){
+        String FILE_NAME = "eventos.csv";
+        FileOutputStream fos = null;
+
+        try {
+            fos = openFileOutput(FILE_NAME, MODE_APPEND);
+            fos.write((dataAtual+","+tipo+","+app+"\n").getBytes());
+
+            //mostrar caminho para arquivo onde foi salvo:
+            System.out.print("\nSaved to " + getFilesDir() + "/" + FILE_NAME);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (fos != null) {
+                try {
+                    fos.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public ArrayList<String> lerListaApps(String data) {
         FileInputStream fis = null;
-        ArrayList<String> dados = new ArrayList<>();
-        HashSet<String> listaApps = new HashSet<>();
+        ArrayList<String> listaApps = new ArrayList<>();
         try {
             fis = openFileInput(data+".csv");
             InputStreamReader isr = new InputStreamReader(fis);
@@ -254,7 +347,6 @@ public class MainActivity extends AppCompatActivity {
             String lido;
 
             while ((lido = br.readLine()) != null) {
-                dados.add(lido);
                 listaApps.add(lido);
             }
         } catch (IOException e) {
@@ -268,10 +360,8 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
-
         return listaApps;
     }
-
 
     private void createTensor(){
         int nUsers = 1;
